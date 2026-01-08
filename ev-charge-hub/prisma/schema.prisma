@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  phone        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  vehicles Vehicle[]
+  bookings Booking[]
+}
+
+model Vehicle {
+  id              String   @id @default(cuid())
+  userId          String
+  make            String   // Tesla, Tata, MG, Mahindra, etc.
+  model           String   // Model 3, Nexon EV, ZS EV, etc.
+  year            Int
+  licensePlate    String   @unique
+  batteryCapacity Float    // kWh
+  createdAt       DateTime @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+  batteryLogs BatteryLog[]
+}
+
+model ChargingStation {
+  id          String   @id @default(cuid())
+  name        String   // "Station A", "Slot 1"
+  location    String   // "Basement Parking", etc.
+  powerOutput Float    // kW (7.2kW, 22kW, 50kW etc.)
+  status      String   @default("available") // available, occupied, maintenance
+
+  bookings Booking[]
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  userId    String
+  vehicleId String
+  stationId String
+  startTime DateTime
+  endTime   DateTime?
+  status    String   @default("scheduled") // scheduled, active, completed, cancelled
+  createdAt DateTime @default(now())
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  station ChargingStation @relation(fields: [stationId], references: [id])
+}
+
+model BatteryLog {
+  id            String   @id @default(cuid())
+  vehicleId     String
+  chargeLevel   Float    // Current charge percentage (0-100)
+  voltage       Float?   // Battery voltage in V
+  current       Float?   // Current in Amps
+  temperature   Float?   // Battery temperature in Celsius
+  healthScore   Float?   // Battery health percentage (0-100)
+  chargingPower Float?   // Current charging power in kW
+  estimatedTime Int?     // Minutes remaining to full charge
+  timestamp     DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
